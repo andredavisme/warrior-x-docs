@@ -269,10 +269,97 @@ Use this checklist when starting any new project:
 
 ---
 
+## Chapter 13 — Loading Data with CSV Upload
+
+*This pattern was established during the Parts Spec Matcher project (Milestone 9) and applies to any Warrior X project that needs bulk data entry.*
+
+### The Problem
+When you need to load many rows into a database table — a product catalog, a list of locations, an event schedule — entering them one at a time through a form is slow and error-prone. CSV upload solves this: prepare your data in a spreadsheet, upload once, commit to the database.
+
+### The Golden Rule: Template First
+**Always download the CSV template from the app before preparing your data.**
+
+The template tells you the exact column names the system expects. If you generate data with different column names — even close ones like `type_id` instead of `type_name` — the upload will fail silently or import nothing.
+
+### The Standard CSV Upload Workflow
+
+1. **Open the admin upload screen** in your app
+2. **Download the template** for the table you want to fill
+3. **Open the template** in a spreadsheet tool (Excel, Google Sheets)
+4. **Fill in your data** row by row, keeping the column headers exactly as they are
+5. **Save as CSV** (not .xlsx)
+6. **Upload the file** — review the preview before committing
+7. **Commit** — the data is written to the database
+8. **Test** — run a real workflow to confirm the data loads and behaves correctly
+
+### When AI Generates Your Data
+AI is helpful for generating placeholder or representative data rows. But AI does not know your exact column names — it will guess. Always:
+- Download the template first
+- Give the template headers to the AI along with your request
+- Tell the AI: *"Generate rows that exactly match these column headers: [paste headers]"*
+
+### Common Mistakes
+| Mistake | What Happens | Fix |
+|---|---|---|
+| Using AI-guessed column names | Upload fails or imports nothing | Download template first; match headers exactly |
+| Saving as .xlsx instead of .csv | File won't parse | Use File → Download as CSV |
+| Leaving required fields blank | Row is rejected | Check which columns are required in the template |
+| Uploading without previewing | Bad data goes into production | Always review the preview table before committing |
+
+---
+
+## Chapter 14 — The Public Wrapper Pattern (Advanced)
+
+*This pattern applies to projects that organize database tables in a named schema (like `parts_matcher` or `alexandria`) rather than the default `public` schema.*
+
+### The Problem
+Supabase's API layer (PostgREST) only exposes tables in the `public` schema by default. If your tables live in a custom schema like `parts_matcher`, your frontend app cannot query them directly.
+
+### The Solution: Public Wrapper Views
+Create a thin **view** in the `public` schema for each table in your custom schema. The view is a window — it shows the data from your real table but is accessible to the API.
+
+```sql
+-- Create a wrapper view
+CREATE OR REPLACE VIEW public.pm_brands
+WITH (security_invoker = false)
+AS SELECT * FROM parts_matcher.brands;
+
+-- Grant access to logged-in users
+GRANT SELECT ON public.pm_brands TO authenticated;
+```
+
+### Naming Convention
+Prefix wrapper views with a short project code followed by an underscore:
+- `pm_` for parts_matcher tables
+- `al_` for alexandria tables
+- Match the underlying table name exactly after the prefix
+
+### Critical Rules
+- **Always use `security_invoker = false`** on wrapper views. Setting it to `true` causes 403 errors on cross-schema views.
+- **Grant SELECT on the view** to `authenticated`, not on the underlying table
+- **For tables that need INSERT**, also grant INSERT on the underlying table and USAGE/SELECT on its sequence
+- **For database functions (RPCs)**, create a `public` wrapper function using `SECURITY DEFINER`
+- **In your JavaScript**, always call `.from('pm_brands')` — never `.schema('parts_matcher').from('brands')`
+
+### Why This Matters
+The wrapper pattern keeps your data organized in named schemas (one per project, one per concern) while still making it available to your frontend. It is the standard pattern for all multi-schema Warrior X projects.
+
+---
+
 ## Chapter 15 — Post-Mortems & Lessons Learned
 
 *This chapter grows over time. When something breaks, when a decision is reversed, or when a pattern proves itself in practice — it gets recorded here so the whole community learns from it.*
 
+### Lessons from Parts Spec Matcher (2026-05)
+
+| Lesson | What Happened | Rule Going Forward |
+|---|---|---|
+| Template-first CSV upload | AI generated CSV files with wrong column names; upload imported nothing | Always download the template and match column headers exactly before generating data |
+| `security_invoker = false` on wrapper views | Setting to `true` caused 403 errors on all cross-schema reads | Default to `false` on every wrapper view in a multi-schema project |
+| Never name the Supabase client `supabase` | Variable name collided with the CDN global, causing silent failures | Name the client `sbClient` or any name other than `supabase` |
+| Role claim cutover requires immediate user update | Renaming a JWT role claim broke all existing admin sessions until users re-authenticated | Update all user `app_metadata` records before deploying a policy that checks the new claim name |
+| Fetch the live anon key at scaffold time | Placeholder keys cause `Invalid API key` errors that look like network failures | Use MCP to fetch the real key when scaffolding; never leave a placeholder |
+
 ---
 
-*Last updated: 2026-05-14 — Initial curriculum draft. Warrior X citizen builder training manual.*
+*Last updated: 2026-05-14 — Added Ch13 CSV upload pattern, Ch14 public wrapper pattern, Ch15 lessons learned from Parts Spec Matcher.*
