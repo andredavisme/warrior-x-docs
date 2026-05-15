@@ -195,6 +195,7 @@ Every feature follows this cycle:
 - Repo names: lowercase, hyphenated (example: `food-pantry-map`)
 - Migration files: `YYYYMMDD_NNN_description.sql` (example: `20260514_001_create_locations_table.sql`)
 - Branch names: descriptive (example: `feat/add-zip-search`)
+- **Public repos for client work: use generic, descriptive names only — never client names or project codenames** (see Chapter 15, PM-002)
 
 ---
 
@@ -222,6 +223,7 @@ These rules protect you, your community, and the people whose data you steward.
 - 🔴 **RLS on every table** — No exceptions. Every table needs row level security enabled
 - 🔴 **Never use the service role key in frontend code** — Use the anon key only
 - 🔴 **No direct commits to main** — Always branch → PR → merge
+- 🔴 **No client names in public repo names** — The repo name is part of the public URL; use generic descriptive names only
 - 🟡 **Review before merging** — At least one other person should review significant changes
 
 ---
@@ -231,7 +233,7 @@ These rules protect you, your community, and the people whose data you steward.
 Use this checklist when starting any new project:
 
 - [ ] Defined the problem and the community it serves
-- [ ] Created a GitHub repository with a clear name and README
+- [ ] Created a GitHub repository with a clear, generic name (no client or person names)
 - [ ] Created a Supabase project
 - [ ] Designed the data model (what tables and columns do you need?)
 - [ ] Created tables with RLS enabled
@@ -275,9 +277,36 @@ Use this checklist when starting any new project:
 
 ---
 
+### PM-002 — Client-Identifying Repo Name on a Public Repository (2026-05-15)
+
+**Project:** Sales Scenario Training Portal (formerly `eia-schneider-training-portal`)
+**Severity:** Low — no data exposed, no code changed; reputational/privacy risk only
+
+#### What Happened
+A public GitHub repo was created to host an open-source, anonymized educational template. The internal content was fully anonymized — fictional company name, fictional product line, no proprietary data. However, the repo was named `eia-schneider-training-portal`, embedding two client identifiers directly in the public GitHub URL.
+
+Anyone visiting the repo or finding it in a GitHub search could immediately identify the client from the URL alone, even before reading a single line of content.
+
+#### Root Cause
+The anonymization process focused entirely on repo content but did not account for the repo name. The repo name is part of the public URL and is visible in search results, browser history, link previews, and GitHub's public graph. It is not covered by internal content anonymization.
+
+#### Fix
+Renamed to `sales-scenario-training-portal` — generic, descriptive, no client identifiers. GitHub automatically redirects all existing links. No content changes were required.
+
+#### Rule Added
+> **Public repos for client work must use generic, descriptive names only.** Never include company names, person names, or project codenames that could identify the client. The repo name is always public regardless of content.
+
+This rule is now reflected in:
+- Chapter 7 (Project Naming Conventions) of this manual
+- Chapter 9 (Security Rules) of this manual
+- Chapter 10 (Project Checklist) of this manual
+- `docs/training-build-guide.md` in the sales-scenario-training-portal repo (Section 8)
+
+---
+
 ### PM-001 — AI Sandbox Filesystem Path Assumptions (2026-05-15)
 
-**Project:** EIA Schneider Training Portal
+**Project:** Sales Scenario Training Portal
 **Severity:** Medium — blocked file generation for one session, no data lost
 
 #### What Happened
@@ -305,4 +334,4 @@ This confirms the actual writable path before any `mkdir` or file-write commands
 
 ---
 
-*Last updated: 2026-05-15 14:00 EDT — Added PM-001: AI sandbox path diagnosis from eia-schneider-training-portal session.*
+*Last updated: 2026-05-15 14:27 EDT — Added PM-002: client-identifying repo name on public repository.*
