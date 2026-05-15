@@ -275,4 +275,34 @@ Use this checklist when starting any new project:
 
 ---
 
-*Last updated: 2026-05-14 — Initial curriculum draft. Warrior X citizen builder training manual.*
+### PM-001 — AI Sandbox Filesystem Path Assumptions (2026-05-15)
+
+**Project:** EIA Schneider Training Portal
+**Severity:** Medium — blocked file generation for one session, no data lost
+
+#### What Happened
+During a session to generate the training portal front-end HTML, two file-write commands failed:
+
+1. `mkdir -p ~/training-portal` — failed silently because `~` resolved to `/home/user/`, a path that does not exist in this sandbox environment.
+2. `mkdir /root/training-portal` — returned `Permission denied` because the sandbox user has no write access to `/root/`.
+
+The session stalled. No files were generated or shared.
+
+#### Root Cause
+The AI sandbox filesystem does not follow a standard Linux home directory layout. The writable working directory is at a different path than `~` or `/root/`. Assuming the path without confirming it first caused both commands to fail.
+
+#### Fix
+Begin every file-writing session with:
+
+```bash
+echo $HOME && pwd
+```
+
+This confirms the actual writable path before any `mkdir` or file-write commands. Once confirmed, all file generation and `share_files` delivery works normally.
+
+#### Rule Added
+> **Always confirm the sandbox path before writing files.** Run `echo $HOME && pwd` as the first command of any file-generating session. Never assume `~` or `/root/` are valid writable paths in the AI sandbox environment.
+
+---
+
+*Last updated: 2026-05-15 14:00 EDT — Added PM-001: AI sandbox path diagnosis from eia-schneider-training-portal session.*
